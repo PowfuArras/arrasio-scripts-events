@@ -16,7 +16,6 @@ var config = {
         borderChunk: 6,
         barChunk: 5,
         mininumBorderChunk: 3,
-        deathBlurAmount: 3,
         darkBorders: false,
         fancyAnimations: true,
         colors: 'normal',
@@ -1626,7 +1625,6 @@ const drawEntity = (() => {
             ctx.globalAlpha = fade;
             ctx.imageSmoothingEnabled = false;
             //ctx.globalCompositeOperation = "overlay";
-            ctx.filter = 'blur('+Math.round(config.graphical.deathBlurAmount - config.graphical.deathBlurAmount*fade)+'px)';
             ctx.drawImage(context.canvas, x - xx, y - yy);
             ctx.restore();
             //ctx.globalCompositeOperation = "source-over";
