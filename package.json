@@ -1,0 +1,19 @@
+{
+	"name": "arras-io-scripts-events",
+	"version": "1.0.0",
+	"description": "A fork of a fan-made sequel to diep.io.",
+	"main": "server/index.js",
+	"scripts": {
+		"start": "node server/index.js"
+	},
+	"author": "Anthony Hengst, PowfuArras",
+	"license": "GPL-3.0-only",
+	"contributors": [
+		"nepphhh <nephdev@gmail.com>",
+		"PowfuArras <discord:@xskt>"
+	],
+	"dependencies": {
+		"express": "^4.19.2",
+		"ws": "^8.18.0"
+	}
+}
