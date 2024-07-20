@@ -1287,7 +1287,7 @@ function startGame() {
     document.getElementById('gameAreaWrapper').style.opacity = 1;
     // Set up the socket
     if (!global.socket) {
-        global.socket = socketInit(3000);
+        global.socket = socketInit(parseInt(window.location.port.length > 1 ? window.location.port : "3000"));
     }
     if (!global.animLoopHandle){
         animloop();
