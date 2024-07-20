@@ -617,42 +617,56 @@ var player = {
 
 // Jumping the gun on motion
 var moveCompensation = (() => {
-    let xx = 0, yy = 0, vx = 0, vy = 0;
-    return {
-        reset: () => {
-            xx = 0;
-            yy = 0;
-        },
-        get: () => {
-            if (config.lag.unresponsive) {
-                return {
-                    x: 0,
-                    y: 0,
-                };
-            }
-            return {
-                x: xx,
-                y: yy,
-            };
-        },
-        iterate: (g) => {
-            if (global.died || global.gameStart) return 0;    
-            // Add motion
-            let damp = gui.accel / gui.topSpeed,
-                len = Math.sqrt(g.x * g.x + g.y * g.y);
-            vx += gui.accel * g.x / len;
-            vy += gui.accel * g.y / len;
-            // Dampen motion
-            let motion = Math.sqrt( vx * vx + vy * vy );
-            if (motion > 0 && damp) {
-                let finalvelocity = motion / (damp / roomSpeed + 1);
-                vx = finalvelocity * vx / motion;
-                vy = finalvelocity * vy / motion;
-            }
-            xx += vx;
-            yy += vy;
-        },
-    };
+	let xx = 0, yy = 0, vx = 0, vy = 0;
+
+	return {
+		// Reset positions
+		reset: () => {
+			xx = 0;
+			yy = 0;
+			vx = 0;
+			vy = 0;
+		},
+
+		// Get the current compensated position
+		get: () => {
+			if (config.lag.unresponsive) {
+				return {
+					x: 0,
+					y: 0,
+				};
+			}
+			return {
+				x: xx,
+				y: yy,
+			};
+		},
+
+		// Iterate with the given input g to update position
+		iterate: (g) => {
+			if (global.died || global.gameStart) return;
+
+			// Add motion
+			let len = Math.sqrt(g.x * g.x + g.y * g.y);
+			if (len > 0) {
+				vx += gui.accel * g.x / len;
+				vy += gui.accel * g.y / len;
+			}
+
+			// Dampen motion
+			let motion = Math.sqrt(vx * vx + vy * vy);
+			if (motion > 0) {
+				let damp = gui.accel / gui.topSpeed;
+				let finalVelocity = motion / (damp / roomSpeed + 1);
+				vx = finalVelocity * vx / motion;
+				vy = finalVelocity * vy / motion;
+			}
+
+			// Update positions
+			xx += vx;
+			yy += vy;
+		},
+	};
 })();
 
 // Prepare the websocket for definition
@@ -1294,7 +1308,6 @@ function startGame() {
     }
     window.canvas.socket = global.socket;
     minimap = [];
-    setInterval(() => moveCompensation.iterate(global.socket.cmd.getMotion()), 1000/30);
     document.getElementById('gameCanvas').focus();
     window.onbeforeunload = () => { return true; };
 }
@@ -1726,49 +1739,55 @@ const gameDraw = (() => {
             ctx.strokeStyle = col;
             ctx.stroke();
         };
-    }
-    // Lag compensation functions
-    const compensation = (() => {
-        // Protected functions
-        function interpolate(p1, p2, v1, v2, ts, tt) {
-            let k = Math.cos((1 + tt) * Math.PI);
-            return 0.5 * (((1 + tt) * v1 + p1) * (k + 1) + (-tt * v2 + p2) * (1 - k));
-        }
-        function extrapolate(p1, p2, v1, v2, ts, tt){
-            return p2 + (p2 - p1) * tt; /*v2 + 0.5 * tt * (v2 - v1) * ts*/
-        }
-        // Useful thing
-        function angleDifference(sourceA, targetA) {
-            let mod = function(a, n) {
-                return (a % n + n) % n;
-            };
-            let a = targetA - sourceA;
-            return mod(a + Math.PI, 2*Math.PI) - Math.PI;
-        }
-        // Constructor
-        return () => {
-            // Protected vars
-            let timediff = 0, t = 0, tt = 0, ts = 0;
-            // Methods
-            return {
-                set: (time = player.time, interval = metrics.rendergap) => {
-                    t = Math.max(getNow() - time - 80, -interval);
-                    if (t > 150 && t < 1000) { t = 150; }
-                    if (t > 1000) { t = 1000 * 1000 * Math.sin(t / 1000 - 1) / t + 1000; }
-                    tt = t / interval;
-                    ts = config.roomSpeed * 30 * t / 1000;
-                },
-                predict: (p1, p2, v1, v2) => {
-                    return (t >= 0) ? extrapolate(p1, p2, v1, v2, ts, tt) : interpolate(p1, p2, v1, v2, ts, tt);
-                },
-                predictFacing: (f1, f2) => {
-                    return f1 + (1 + tt) * angleDifference(f1, f2);
-                },
-                getPrediction: () => { return t; },
-            };
-        };
-    })(); 
-    // Make graphs
+	}
+	// Lag compensation functions
+	const compensation = (() => {
+		// Linear interpolation function
+		function lerp(a, b, t) {
+			return a + t * (b - a);
+		}
+
+		// Protected functions
+		function interpolate(p1, p2, v1, v2, ts, tt) {
+			return lerp(p1, p2, (1 + tt) * 0.5);
+		}
+
+		function extrapolate(p1, p2, v1, v2, ts, tt) {
+			return p2 + (p2 - p1) * tt;
+		}
+
+		// Useful thing
+		function angleDifference(sourceA, targetA) {
+			let mod = (a, n) => (a % n + n) % n;
+			let a = targetA - sourceA;
+			return mod(a + Math.PI, 2 * Math.PI) - Math.PI;
+		}
+
+		// Constructor
+		return () => {
+			// Protected vars
+			let t = 0, tt = 0, ts = 0;
+
+			// Methods
+			return {
+				set: (time = player.time, interval = metrics.rendergap) => {
+					t = Math.max(performance.now() - time - 80, -interval);
+					if (t > 150 && t < 1000) { t = 150; }
+					if (t > 1000) { t = 1000 * 1000 * Math.sin(t / 1000 - 1) / t + 1000; }
+					tt = t / interval;
+					ts = config.roomSpeed * 30 * t / 1000;
+				},
+				predict: (p1, p2, v1, v2) => {
+					return (t >= 0) ? extrapolate(p1, p2, v1, v2, ts, tt) : interpolate(p1, p2, v1, v2, ts, tt);
+				},
+				predictFacing: (f1, f2) => {
+					return f1 + (1 + tt) * angleDifference(f1, f2);
+				},
+				getPrediction: () => { return t; },
+			};
+		};
+	})();
+	// Make graphs
     const timingGraph = graph(),
         lagGraph = graph(),
         gapGraph = graph();
@@ -1930,32 +1949,33 @@ const gameDraw = (() => {
             ctx.globalAlpha = 1;
         }
 
-        { // Draw things 
-            entities.forEach(function entitydrawingloop(instance) {
-                if (!instance.render.draws) { return 1; }  
-                let motion = compensation(); 
-                if (instance.render.status.getFade() === 1) { motion.set(); } else { motion.set(instance.render.lastRender, instance.render.interval); }
-                instance.render.x = motion.predict(instance.render.lastx, instance.x, instance.render.lastvx, instance.vx);
-                instance.render.y = motion.predict(instance.render.lasty, instance.y, instance.render.lastvy, instance.vy);
-                instance.render.f = (instance.id === gui.playerid && !instance.twiggle) ? 
-                    Math.atan2(target.y, target.x) : 
-                    motion.predictFacing(instance.render.lastf, instance.facing);
-                let x = (instance.id === gui.playerid) ? 0 : ratio * instance.render.x - px,
-                    y = (instance.id === gui.playerid) ? 0 : ratio * instance.render.y - py;
-                x += global.screenWidth / 2;
-                y += global.screenHeight / 2;
-                drawEntity(x, y, instance, ratio, 1.1, instance.render.f);
-            });
-            if (!config.graphical.screenshotMode) {
-                entities.forEach(function entityhealthdrawingloop(instance) {
-                    let x = (instance.id === gui.playerid) ? 0 : ratio * instance.render.x - px,
-                        y = (instance.id === gui.playerid) ? 0 : ratio * instance.render.y - py;
-                    x += global.screenWidth / 2;
-                    y += global.screenHeight / 2;
-                    drawHealth(x, y, instance, ratio);
-                });
-            }
-        }
+		{ // Draw things 
+			entities.forEach(function entitydrawingloop(instance) {
+				if (!instance.render.draws) return;
+			
+				let motion = compensation();
+				motion.set(instance.render.status.getFade() === 1 ? undefined : instance.render.lastRender, instance.render.interval);
+			
+				instance.render.x = motion.predict(instance.render.lastx, instance.x, instance.render.lastvx, instance.vx);
+				instance.render.y = motion.predict(instance.render.lasty, instance.y, instance.render.lastvy, instance.vy);
+				instance.render.f = (instance.id === gui.playerid && !instance.twiggle) ?
+					Math.atan2(target.y, target.x) :
+					motion.predictFacing(instance.render.lastf, instance.facing);
+			
+				let x = ratio * instance.render.x - px + global.screenWidth / 2;
+				let y = ratio * instance.render.y - py + global.screenHeight / 2;
+			
+				drawEntity(x, y, instance, ratio, 1.1, instance.render.f);
+			});
+			
+			if (!config.graphical.screenshotMode) {
+				entities.forEach(function entityhealthdrawingloop(instance) {
+					let x = ratio * instance.render.x - px + global.screenWidth / 2;
+					let y = ratio * instance.render.y - py + global.screenHeight / 2;
+					drawHealth(x, y, instance, ratio);
+				});
+			}
+		}
         
         // Draw GUI       
         let alcoveSize = 200/Math.max(global.screenWidth, global.screenHeight * 16 / 9);
@@ -2443,6 +2463,27 @@ const gameDrawDisconnected = (() => {
         text.disconnected.draw('💀 Disconnected. 💀', global.screenWidth / 2, global.screenHeight / 2, 30, color.guiwhite, 'center');
         text.message.draw(global.message, global.screenWidth / 2, global.screenHeight / 2 + 30, 15, color.orange, 'center');
     };
+})();
+
+(function () {
+	const targetFrameRate = 120;
+	const frameDuration = 1000 / targetFrameRate;
+	let lastTimestamp = performance.now();
+
+	function update() {
+		let currentTimestamp = performance.now();
+		let elapsed = currentTimestamp - lastTimestamp;
+
+		if (elapsed >= frameDuration) {
+			lastTimestamp = currentTimestamp - (elapsed % frameDuration);
+			moveCompensation.iterate(global.socket.cmd.getMotion());
+		}
+
+		requestAnimationFrame(update);
+	}
+
+	// Start the update loop
+	requestAnimationFrame(update);
 })();
 
 // The main function
