@@ -20,8 +20,8 @@
 		"debug": false
 	},
 	"verbose": true,
-	"WIDTH": 3000,
-	"HEIGHT": 3000,
+	"WIDTH": 6000,
+	"HEIGHT": 6000,
 	"MODE": "tdm",
 	"RANDOM_COLORS": false,
 	"BANNED_CHARACTER_REGEX": "/[\uFDFD\u200E\u0000]/gi",
