@@ -44,6 +44,7 @@ const global = {
     KEY_CHOOSE_8: 76,
     KEY_LEVEL_UP: 78,
     KEY_FUCK_YOU: 191,
+	KEY_UPGRADE_LOCK: 77,
 
     // Canvas
     screenWidth: window.innerWidth,
