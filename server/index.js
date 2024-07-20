@@ -5040,7 +5040,7 @@ process.on("SIGINT", () => {
             setTimeout(() => {
                 util.warn('Process ended.'); 
                 process.exit();
-            }, 3000);
-        }, 17000);
+            }, 300);
+        }, 1700);
     }
 });
