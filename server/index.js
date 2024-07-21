@@ -202,8 +202,8 @@ const room = {
     width: conf.WIDTH,
     height: conf.HEIGHT,
     setup: conf.ROOM_SETUP,
-    xgrid: conf.X_GRID, 
-    ygrid: conf.Y_GRID,
+    xgrid: conf.ROOM_SETUP[0].length, 
+    ygrid: conf.ROOM_SETUP.length,
     gameMode: conf.MODE,
     skillBoost: conf.SKILL_BOOST,
     scale: {
