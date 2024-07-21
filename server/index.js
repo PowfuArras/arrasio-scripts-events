@@ -4031,18 +4031,20 @@ const sockets = (() => {
                 // Start it
                 setInterval(slowloop, 1000);
                 // Give the broadcast method
-                return socket => {
-                    // Make sure it's spawned first
-                    if (socket.status.hasSpawned) {
-                        let m = [0], lb = [0, 0];
-                        m = readmap(socket.player.team, socket.status.needsFullMap);
-                        socket.status.needsFullMap = false;
-                        lb = readlb(socket.status.needsFullLeaderboard);
-                        socket.status.needsFullLeaderboard = false;
-                        // Don't broadcast if you don't need to
-                        if (m !== [0] || lb !== [0, 0]) { socket.talk('b', ...m, ...lb); }
-                    }
-                };
+				return socket => {
+					// Make sure it's spawned first
+					if (socket.status.hasSpawned) {
+						let m = [0], lb = [0, 0];
+						m = readmap(socket.player.team, socket.status.needsFullMap);
+						socket.status.needsFullMap = false;
+						lb = readlb(socket.status.needsFullLeaderboard);
+						socket.status.needsFullLeaderboard = false;
+						// Compare the contents of the arrays instead of their references
+						if (!util.arraysEqual(m, [0]) || !util.arraysEqual(lb, [0, 0])) {
+							socket.talk('b', ...m, ...lb);
+						}
+					}
+				};
             })();
             // Build the returned function
             // This function initalizes the socket upon connection
@@ -4735,7 +4737,7 @@ var maintainloop = (() => {
         let food = [], foodSpawners = [];
         // The two essential functions
         function getFoodClass(level) {
-            let a = { };
+            let a = null;
             switch (level) {
                 case 0: a = Class.egg; break;
                 case 1: a = Class.square; break;
@@ -4745,10 +4747,10 @@ var maintainloop = (() => {
                 case 5: a = Class.hugePentagon; break;
                 default: throw('bad food level');
             }
-            if (a !== {}) {
+            if (a !== null) {
                 a.BODY.ACCELERATION = 0.015 / (a.FOOD.LEVEL + 1);
             }
-            return a;
+            return a ?? { };
         }
         let placeNewFood = (position, scatter, level, allowInNest = false) => {
             let o = nearest(food, position); 
