@@ -1895,7 +1895,7 @@ const gameDraw = (() => {
         let px, py;
         { // Move the camera
             let motion = compensation(); motion.set();
-            let smear = { x: 0, y: 0, };// moveCompensation.get();
+            let smear = moveCompensation.get();
             GRAPHDATA = motion.getPrediction();
             // Don't move the camera if you're dead. This helps with jitter issues
             player.renderx = 
